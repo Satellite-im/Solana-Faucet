@@ -15,6 +15,8 @@ const connection = process.env.SOLANA_NETWORK.includes("http://127.0.0.1")
       "confirmed"
     );
 
+console.log("payer ", process.env.PAYER_PRIVATE_KEY)
+
 //Retrieve payer account keys
 const payerAccount = web3.Keypair.fromSecretKey(
   Buffer.from(process.env.PAYER_PRIVATE_KEY, "base64")
