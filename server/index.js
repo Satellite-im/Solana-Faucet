@@ -7,20 +7,22 @@ const cors = require("cors");
 const app = express();
 const port = process.env.PORT;
 
+const SolanaClusters = ["devnet", "testnet", "mainnet-beta"];
+
 //Initializing Solana network connection
-const connection = process.env.SOLANA_NETWORK.includes("http://127.0.0.1")
-  ? new web3.Connection(process.env.SOLANA_NETWORK, "confirmed")
-  : new web3.Connection(
+const connection = SolanaClusters.includes(process.env.SOLANA_NETWORK)
+  ? new web3.Connection(
       web3.clusterApiUrl(process.env.SOLANA_NETWORK),
       "confirmed"
-    );
-
-console.log("payer ", process.env.PAYER_PRIVATE_KEY)
+    )
+  : new web3.Connection(process.env.SOLANA_NETWORK, "confirmed");
 
 //Retrieve payer account keys
 const payerAccount = web3.Keypair.fromSecretKey(
   Buffer.from(process.env.PAYER_PRIVATE_KEY, "base64")
 );
+
+console.log(`Payer: ${payerAccount.publicKey.toBase58()}`);
 
 app.use(
   cors({
