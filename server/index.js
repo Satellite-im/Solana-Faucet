@@ -41,7 +41,7 @@ app.post("/", async (req, res) => {
   const to = new web3.PublicKey(address);
 
   if (!address) {
-    res.status(400).json({
+    return res.status(400).json({
       status: "failed",
       errorCode: 3,
       errorMessage: "Malformed request",
