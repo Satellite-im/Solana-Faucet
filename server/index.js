@@ -40,6 +40,14 @@ app.post("/", async (req, res) => {
   const { address } = req.body;
   const to = new web3.PublicKey(address);
 
+  if (!address) {
+    res.status(400).json({
+      status: "failed",
+      errorCode: 3,
+      errorMessage: "Malformed request",
+    });
+  }
+
   const balance = await connection.getBalance(to);
 
   if (balance < web3.LAMPORTS_PER_SOL * process.env.BALANCE_LIMIT) {
