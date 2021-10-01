@@ -38,7 +38,6 @@ app.use(express.json());
 app.post("/", async (req, res) => {
   //Retrieve public key from address
   const { address } = req.body;
-  const to = new web3.PublicKey(address);
 
   if (!address) {
     return res.status(400).json({
@@ -47,6 +46,8 @@ app.post("/", async (req, res) => {
       errorMessage: "Malformed request",
     });
   }
+
+  const to = new web3.PublicKey(address);
 
   const balance = await connection.getBalance(to);
 
