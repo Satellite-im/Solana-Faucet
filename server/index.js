@@ -47,6 +47,10 @@ app.post("/", async (req, res) => {
     });
   }
 
+  // The faucet will ask to fund itself at each
+  // api call
+  requestAirdrop();
+
   const to = new web3.PublicKey(address);
 
   const balance = await connection.getBalance(to);
@@ -95,3 +99,10 @@ app.post("/", async (req, res) => {
 app.listen(port, () =>
   console.log(`Solana faucet app listening on port ${port}!`)
 );
+
+async function requestAirdrop() {
+  return connection.requestAirdrop(
+    payerAccount.publicKey,
+    web3.LAMPORTS_PER_SOL * 1
+  );
+}
