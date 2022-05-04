@@ -3,7 +3,12 @@ require("dotenv").config();
 const web3 = require("@solana/web3.js");
 const express = require("express");
 const cors = require("cors");
+const Database = require('./app/db')
 
+console.log(Database)
+let db = new Database('AccessCodes')
+
+// console.log(db.accessCodeIsValid('abc'))
 const app = express();
 const port = process.env.PORT;
 
@@ -24,9 +29,10 @@ const payerAccount = web3.Keypair.fromSecretKey(
 
 console.log(`Payer: ${payerAccount.publicKey.toBase58()}`);
 
+const corsOrigin = (process.env.CORS_DOMAIN) ? process.env.CORS_DOMAIN : '*'
 app.use(
   cors({
-    origin: "*",
+    origin: corsOrigin,
   })
 );
 
@@ -36,10 +42,19 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 app.post("/", async (req, res) => {
-  //Retrieve public key from address
-  const { address } = req.body;
+  //Retrieve public key from address, and the access code
+  const { address, accessCode } = req.body;
 
-  if (!address) {
+  // if they don't provide what we need, or the access code is invalid kick out here
+  if (!address || await db.accessCodeIsValid(accessCode)) {
+    return res.status(400).json({
+      status: "failed",
+      errorCode: 3,
+      errorMessage: "Malformed request",
+    });
+  }
+
+  if (process.env.ENVIRONMENT === 'EARLY_ACCESS' && !accessCode){
     return res.status(400).json({
       status: "failed",
       errorCode: 3,
@@ -72,6 +87,9 @@ app.post("/", async (req, res) => {
         transaction,
         [payerAccount]
       );
+      if (process.env.ENVIRONMENT === 'EARLY_ACCESS' && accessCode){
+        await db.incrementCode(accessCode)
+      }
 
       //response for web3 transaction success
       res.json({
@@ -96,8 +114,52 @@ app.post("/", async (req, res) => {
   }
 });
 
+// Returns an object with status on all access codes
+app.get("/checkCode/status", async (req, res) => {
+  console.log('here')
+  let allCodeStatus = await db.getStatus()
+  console.log(allCodeStatus)
+  if(!allCodeStatus){
+    return res.status(400).json({
+      status: "failed",
+      errorCode: 4,
+      errorMessage: "Malformed request or invalid code",
+    });
+  }
+  return res.status(200).json({
+    status: "success",
+    message: allCodeStatus
+  });
+})
+
+// Allows you to check a single access code for a boolean response if it's good or not
+app.get("/checkCode/:accessCode", async (req, res) => {
+  //Retrieve public key from address
+
+  const { accessCode } = req.params;
+  let validStatus = await db.accessCodeIsValid(accessCode)
+  if (!accessCode && !validStatus.status) {
+    return res.status(400).json({
+      status: "failed",
+      errorCode: 4,
+      errorMessage: "Malformed request or invalid code",
+    });
+  }
+  if(validStatus){
+    return res.status(200).json({
+      status: "success",
+      message: validStatus.status
+    });
+  }
+  return res.status(400).json({
+    status: "failed",
+    errorCode: 5,
+    errorMessage: "Unknown Error",
+  });
+});
+
 app.listen(port, () =>
-  console.log(`Solana faucet app listening on port ${port}!`)
+  console.log(`Solana faucet app listening on port ${port}!`, 'ENV: ', process.env.ENVIRONMENT)
 );
 
 async function requestAirdrop() {

@@ -20,3 +20,6 @@ docker-compose build
 ```shell
 docker-compose up
 ```
+
+# API Endpoints
+
