@@ -5,10 +5,9 @@ const express = require("express");
 const cors = require("cors");
 const Database = require('./app/db')
 
-console.log(Database)
 let db = new Database('AccessCodes')
 
-// console.log(db.accessCodeIsValid('abc'))
+console.log(process.env)
 const app = express();
 const port = process.env.PORT;
 
@@ -41,6 +40,13 @@ app.use(express.urlencoded({ extended: false }));
 // parse application/json
 app.use(express.json());
 
+app.get("/", async (req, res) => {
+  console.log('request received')
+  return res.status(200).json({
+    status: "success",
+    message: "Service Healthy",
+  });
+})
 app.post("/", async (req, res) => {
   //Retrieve public key from address, and the access code
   const { address, accessCode } = req.body;

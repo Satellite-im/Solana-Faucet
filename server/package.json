@@ -1,0 +1,19 @@
+{
+  "name": "solana_faucet",
+  "version": "1.0.0",
+  "description": "Simple Solana faucet",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "KNOBS",
+  "license": "ISC",
+  "dependencies": {
+    "@solana/web3.js": "^1.29.1",
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "sqlite": "^4.1.1",
+    "sqlite3": "^5.0.8"
+  }
+}
