@@ -7,7 +7,6 @@ const Database = require('./app/db')
 
 let db = new Database('AccessCodes')
 
-console.log(process.env)
 const app = express();
 const port = process.env.PORT;
 

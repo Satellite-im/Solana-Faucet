@@ -1,74 +1,103 @@
-const sqlite3 = require('sqlite3')
-const sqlite = require('sqlite') // this library lets us use async/await instead of callbacks
+const { Pool } = require("pg");
 
 class Database {
-  databaseName = 'AccessCodes'
-  accessCodesTablename = 'ACCESS_CODES'
-  db
+  databaseName = "AccessCodes";
+  accessCodesTablename = "ACCESS_CODES";
+  db;
 
   constructor(inputDBName) {
-    this.databaseName = inputDBName
-    this.init()
+    this.databaseName = inputDBName;
+    this.init();
   }
 
   async init() {
-    this.db = await this.createDatabase()
+    this.pool = new Pool();
+
     /* UNCOMMENT this section to test methods vvv */
-    // await this.createTable()
-    // await this.insertSampleData('hi3333r3aaaaa', 10)
-    // let out = await this.accessCodeIsValid('hi3333r3aaaaa')
-    // this.accessCodeIsValid('ghi')
-    // this.incrementCode('ghi')
+    // await this.createTable(); // This creates the table if it doesn't exist
+    // await this.insertSampleData("hi3333r3aaaaaa", 10); // this inserts a new access code, with a 10 limit
+    // await this.accessCodeIsValid("hi3333r3aaaaa"); // {status: true/false} response
+
+    // this.incrementCode('hi3333r3aaaaa') // bump the code by one if it's not maxed out
+    // await this.getStatus(); // array with all objects, minus the access code
     /* UNCOMMENT this section to test methods ^^^ */
-    return
+
+    return;
   }
 
-  // Creates a local sqlite database in the data folder one level up
-  async createDatabase() {
-    return await sqlite.open({ // OPEN_READWRITE | OPEN_CREATE
-      filename: `./data/${this.databaseName}.db`,
-      driver: sqlite3.Database
-    })
-  }
-
-  // Adds a table with custom tablename, but hard coded schema for now
+  // // Adds a table with custom tablename, but hard coded schema for now
   async createTable() {
-    const buildTableQuery =
-      `CREATE TABLE if not exists ${this.accessCodesTablename} 
-          ( ID INTEGER PRIMARY KEY, CODE VARCHAR(25) NOT NULL UNIQUE, MAX NUMBER DEFAULT 0 NOT NULL, USED NUMBER DEFAULT 0 NOT NULL);`
+    const buildTableQuery = `CREATE TABLE IF NOT EXISTS ${this.accessCodesTablename} 
+          ( ID serial PRIMARY KEY, CODE VARCHAR(25) NOT NULL UNIQUE, MAX INTEGER DEFAULT 0 NOT NULL, USED INTEGER DEFAULT 0 NOT NULL);`;
 
-    // If the table does not exist, create it here
-    return await this.db.exec(buildTableQuery)
+    await this.pool.connect().then((client) => {
+      return client
+        .query(buildTableQuery)
+        .then(() => {
+          client.release();
+        })
+        .catch((err) => {
+          client.release();
+          console.log(err.stack);
+        });
+    });
   }
-  async insertSampleData(sampleCode, max, start = 0) { // string, int, int
-    // seed sample data
-    return await this.db.exec(`INSERT INTO ${this.accessCodesTablename}(CODE,MAX,USED) VALUES('${sampleCode}', ${max}, ${start});`)
+  async insertSampleData(sampleCode, max, start = 0) {
+    // string, int, int
+    //   // seed sample data
+    await this.pool.connect((err, client) => {
+      if (err) throw err;
+      return client
+        .query(
+          `INSERT INTO ${this.accessCodesTablename} (CODE,MAX,USED) VALUES($1, $2, $3);`,
+          [sampleCode, max, start]
+        )
+        .then((res) => {
+          client.release();
+        })
+        .catch((err) => {
+          client.release();
+          console.log(err.stack);
+        });
+    });
   }
-
 
   async accessCodeIsValid(accessCode) {
-    const validQuery = `SELECT * FROM ${this.accessCodesTablename} WHERE CODE == '${accessCode}'`
-    let recordResponse = await this.db.get(validQuery)
-    if(recordResponse && recordResponse.MAX > recordResponse.USED) {
-      return {status: true}
+    // connect using the pool
+    const client = await this.pool.connect();
+    // run the query with a sanitized access code input
+    const res = await client.query(
+      `SELECT * FROM ${this.accessCodesTablename} WHERE CODE = $1;`,
+      [accessCode]
+    );
+
+    // there can only be one record per access code, so get it and make sure it hasn't been used up
+    const responseRow = res.rows[0];
+    if (responseRow && responseRow.max > responseRow.used) {
+      return { status: true };
     }
-    return {status: false}
+    return { status: false };
   }
 
   // increments the used column by 1
   async incrementCode(accessCode) {
     // Checks if the codes max is greater than the used column
-    let isValid = await this.accessCodeIsValid(accessCode)
-    if(isValid.status){
-      const validQuery = `UPDATE ${this.accessCodesTablename} SET USED = USED + 1 WHERE CODE == '${accessCode}'`
-      return await this.db.exec(validQuery)
+    const isValid = await this.accessCodeIsValid(accessCode);
+    const client = await this.pool.connect();
+    if (isValid.status) {
+      const res = await client.query(
+        `UPDATE ${this.accessCodesTablename} SET USED = USED + 1 WHERE CODE = $1`,
+        [accessCode]
+      );
     }
-
   }
   async getStatus() {
-    // returns ID, Used, and Max - used for reporting/tracking
-      return await this.db.all(`SELECT ID, MAX, USED FROM ${this.accessCodesTablename}`)
-
+    const client = await this.pool.connect();
+    return await client
+      .query(`SELECT id, max, used FROM ${this.accessCodesTablename}`)
+      .then((res) => {
+        return res.rows;
+      });
   }
 }
 
