@@ -9,5 +9,5 @@ COPY ./server .
 RUN npm install
 COPY .env ./.env
 
-EXPOSE 443
+EXPOSE 3000 5432
 CMD [ "node", "index.js" ]

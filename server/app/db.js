@@ -1,8 +1,12 @@
+require("dotenv").config();
+
 const { Pool } = require("pg");
+connString = process.env.PG_CONN
 
 class Database {
-  databaseName = "AccessCodes";
-  accessCodesTablename = "ACCESS_CODES";
+  databaseName = "AccessCodes"
+  accessCodesTablename = "ACCESS_CODES"
+  
   db;
 
   constructor(inputDBName) {
@@ -11,11 +15,13 @@ class Database {
   }
 
   async init() {
-    this.pool = new Pool();
+    this.pool = new Pool({connectionString: connString});
 
     /* UNCOMMENT this section to test methods vvv */
-    // await this.createTable(); // This creates the table if it doesn't exist
-    // await this.insertSampleData("hi3333r3aaaaaa", 10); // this inserts a new access code, with a 10 limit
+    await this.createTable(); // This creates the table if it doesn't exist
+    await this.insertSampleData("Hello Tom!", 10); // this inserts a new access code, with a 10 limit
+    await this.insertSampleData("RINGO123", 1); // this inserts a new access code, with a 10 limit
+    await this.insertSampleData("Cactus54321", 1); // this inserts a new access code, with a 10 limit
     // await this.accessCodeIsValid("hi3333r3aaaaa"); // {status: true/false} response
 
     // this.incrementCode('hi3333r3aaaaa') // bump the code by one if it's not maxed out
