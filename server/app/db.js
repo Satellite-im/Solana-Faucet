@@ -19,7 +19,7 @@ class Database {
 
     /* UNCOMMENT this section to test methods vvv */
     await this.createTable() // This creates the table if it doesn't exist
-    // await this.insertSampleData("Hello Tom!", 10); // this inserts a new access code, with a 10 limit
+    // await this.insertSampleData("HelloTom!", 10); // this inserts a new access code, with a 10 limit
     // await this.insertSampleData("RINGO123", 1); // this inserts a new access code, with a 10 limit
     // await this.insertSampleData("Cactus54321", 1); // this inserts a new access code, with a 10 limit
     // await this.accessCodeIsValid("hi3333r3aaaaa"); // {status: true/false} response
@@ -80,9 +80,9 @@ class Database {
     // there can only be one record per access code, so get it and make sure it hasn't been used up
     const responseRow = res.rows[0]
     if (responseRow && responseRow.max > responseRow.used) {
-      return { status: true }
+      return true
     }
-    return { status: false }
+    return false
   }
 
   // increments the used column by 1
