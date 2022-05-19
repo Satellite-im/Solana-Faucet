@@ -25,8 +25,6 @@ const payerAccount = web3.Keypair.fromSecretKey(
   Buffer.from(process.env.PAYER_PRIVATE_KEY, 'base64'),
 )
 
-console.log(`Payer: ${payerAccount.publicKey.toBase58()}`)
-
 const corsOrigin = process.env.CORS_DOMAIN ? process.env.CORS_DOMAIN : '*'
 app.use(
   cors({
@@ -40,7 +38,6 @@ app.use(express.urlencoded({ extended: false }))
 app.use(express.json())
 
 app.get('/', async (req, res) => {
-  console.log('request received')
   return res.status(200).json({
     status: 'success',
     message: 'Service Healthy',
@@ -50,20 +47,22 @@ app.post('/', async (req, res) => {
   //Retrieve public key from address, and the access code
   const { address, accessCode } = req.body
 
-  // if they don't provide what we need, or the access code is invalid kick out here
-  if (!address || !(await db.accessCodeIsValid(accessCode))) {
+  if (!address) {
     return res.status(400).json({
       status: 'failed',
       errorCode: 3,
-      errorMessage: 'Malformed request',
+      message: 'Malformed request',
     })
   }
 
-  if (process.env.ENVIRONMENT === 'EARLY_ACCESS' && !accessCode) {
+  if (
+    process.env.ENVIRONMENT === 'EARLY_ACCESS' &&
+    !(await db.accessCodeIsValid(accessCode))
+  ) {
     return res.status(400).json({
       status: 'failed',
-      errorCode: 3,
-      errorMessage: 'Malformed request',
+      errorCode: 4,
+      message: 'Invalid access code',
     })
   }
 
@@ -121,9 +120,7 @@ app.post('/', async (req, res) => {
 
 // Returns an object with status on all access codes
 app.get('/checkCode/status', async (req, res) => {
-  console.log('here')
   let allCodeStatus = await db.getStatus()
-  console.log(allCodeStatus)
   if (!allCodeStatus) {
     return res.status(400).json({
       status: 'failed',
@@ -146,7 +143,7 @@ app.get('/checkCode/:accessCode', async (req, res) => {
   if (!accessCode && !validStatus.status) {
     return res.status(400).json({
       status: 'failed',
-      errorCode: 4,
+      errorCode: 5,
       errorMessage: 'Malformed request or invalid code',
     })
   }
@@ -158,7 +155,7 @@ app.get('/checkCode/:accessCode', async (req, res) => {
   }
   return res.status(400).json({
     status: 'failed',
-    errorCode: 5,
+    errorCode: 6,
     errorMessage: 'Unknown Error',
   })
 })

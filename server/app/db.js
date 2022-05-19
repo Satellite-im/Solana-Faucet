@@ -87,10 +87,9 @@ class Database {
 
   // increments the used column by 1
   async incrementCode(accessCode) {
-    // Checks if the codes max is greater than the used column
-    const isValid = await this.accessCodeIsValid(accessCode)
     const client = await this.pool.connect()
-    if (isValid.status) {
+    // Checks if the codes max is greater than the used column
+    if (await this.accessCodeIsValid(accessCode)) {
       const res = await client.query(
         `UPDATE ${this.accessCodesTablename} SET USED = USED + 1 WHERE CODE = $1`,
         [accessCode],
