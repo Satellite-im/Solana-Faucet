@@ -105,7 +105,7 @@ app.post('/', async (req, res) => {
       res.json({
         status: 'failed',
         errorCode: 2,
-        errorMessage: error,
+        message: error,
       })
     }
   } else {
@@ -113,7 +113,7 @@ app.post('/', async (req, res) => {
     res.json({
       status: 'failed',
       errorCode: 1,
-      errorMessage: 'The account balance limit has already been exceeded',
+      message: 'The account balance limit has already been exceeded',
     })
   }
 })
@@ -125,7 +125,7 @@ app.get('/checkCode/status', async (req, res) => {
     return res.status(400).json({
       status: 'failed',
       errorCode: 4,
-      errorMessage: 'Malformed request or invalid code',
+      message: 'Malformed request or invalid code',
     })
   }
   return res.status(200).json({
@@ -139,24 +139,23 @@ app.get('/checkCode/:accessCode', async (req, res) => {
   //Retrieve public key from address
 
   const { accessCode } = req.params
-  let validStatus = await db.accessCodeIsValid(accessCode)
-  if (!accessCode && !validStatus.status) {
+  const validStatus = await db.accessCodeIsValid(accessCode)
+  if (!accessCode || !validStatus) {
     return res.status(400).json({
       status: 'failed',
       errorCode: 5,
-      errorMessage: 'Malformed request or invalid code',
+      message: 'Malformed request or invalid code',
     })
   }
   if (validStatus) {
     return res.status(200).json({
       status: 'success',
-      message: validStatus.status,
     })
   }
   return res.status(400).json({
     status: 'failed',
     errorCode: 6,
-    errorMessage: 'Unknown Error',
+    message: 'Unknown Error',
   })
 })
 
@@ -169,8 +168,12 @@ app.listen(port, () =>
 )
 
 async function requestAirdrop() {
-  return connection.requestAirdrop(
-    payerAccount.publicKey,
-    web3.LAMPORTS_PER_SOL * 1,
-  )
+  try {
+    return connection.requestAirdrop(
+      payerAccount.publicKey,
+      web3.LAMPORTS_PER_SOL * 1,
+    )
+  } catch (e) {
+    console.log(e)
+  }
 }

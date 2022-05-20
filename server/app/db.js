@@ -15,7 +15,17 @@ class Database {
   }
 
   async init() {
-    this.pool = new Pool({ connectionString: connString })
+    this.pool = new Pool({
+      connectionString: connString,
+      port: process.env.PORT,
+      idleTimeoutMillis: 20000,
+    })
+
+    const errorListener = (error) => {
+      console.error(error.stack)
+    }
+
+    this.pool.on('error', (error) => errorListener(error))
 
     /* UNCOMMENT this section to test methods vvv */
     await this.createTable() // This creates the table if it doesn't exist
@@ -27,8 +37,6 @@ class Database {
     // this.incrementCode('hi3333r3aaaaa') // bump the code by one if it's not maxed out
     // await this.getStatus(); // array with all objects, minus the access code
     /* UNCOMMENT this section to test methods ^^^ */
-
-    return
   }
 
   // // Adds a table with custom tablename, but hard coded schema for now
@@ -36,36 +44,27 @@ class Database {
     const buildTableQuery = `CREATE TABLE IF NOT EXISTS ${this.accessCodesTablename} 
           ( ID serial PRIMARY KEY, CODE VARCHAR(25) NOT NULL UNIQUE, MAX INTEGER DEFAULT 0 NOT NULL, USED INTEGER DEFAULT 0 NOT NULL);`
 
-    await this.pool.connect().then((client) => {
-      return client
-        .query(buildTableQuery)
-        .then(() => {
-          client.release()
-        })
-        .catch((err) => {
-          client.release()
-          console.log(err.stack)
-        })
-    })
+    const client = await this.pool.connect()
+    try {
+      await client.query(buildTableQuery)
+    } catch (err) {
+      console.log(err.stack)
+    }
+    client.release()
   }
   async insertSampleData(sampleCode, max, start = 0) {
     // string, int, int
     //   // seed sample data
-    await this.pool.connect((err, client) => {
-      if (err) throw err
-      return client
-        .query(
-          `INSERT INTO ${this.accessCodesTablename} (CODE,MAX,USED) VALUES($1, $2, $3);`,
-          [sampleCode, max, start],
-        )
-        .then((res) => {
-          client.release()
-        })
-        .catch((err) => {
-          client.release()
-          console.log(err.stack)
-        })
-    })
+    const client = await this.pool.connect()
+    try {
+      await client.query(
+        `INSERT INTO ${this.accessCodesTablename} (CODE,MAX,USED) VALUES($1, $2, $3);`,
+        [sampleCode, max, start],
+      )
+    } catch (err) {
+      console.log(err.stack)
+    }
+    client.release()
   }
 
   async accessCodeIsValid(accessCode) {
@@ -90,7 +89,7 @@ class Database {
     const client = await this.pool.connect()
     // Checks if the codes max is greater than the used column
     if (await this.accessCodeIsValid(accessCode)) {
-      const res = await client.query(
+      await client.query(
         `UPDATE ${this.accessCodesTablename} SET USED = USED + 1 WHERE CODE = $1`,
         [accessCode],
       )
@@ -98,11 +97,10 @@ class Database {
   }
   async getStatus() {
     const client = await this.pool.connect()
-    return await client
-      .query(`SELECT id, max, used FROM ${this.accessCodesTablename}`)
-      .then((res) => {
-        return res.rows
-      })
+    const res = await client.query(
+      `SELECT id, max, used FROM ${this.accessCodesTablename}`,
+    )
+    return res.rows
   }
 }
 
