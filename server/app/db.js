@@ -44,38 +44,38 @@ class Database {
     const buildTableQuery = `CREATE TABLE IF NOT EXISTS ${this.accessCodesTablename} 
           ( ID serial PRIMARY KEY, CODE VARCHAR(25) NOT NULL UNIQUE, MAX INTEGER DEFAULT 0 NOT NULL, USED INTEGER DEFAULT 0 NOT NULL);`
 
-    const client = await this.pool.connect()
+    const pool = await this.pool.connect()
     try {
-      await client.query(buildTableQuery)
+      await pool.query(buildTableQuery)
     } catch (err) {
       console.log(err.stack)
     }
-    client.release()
+    await pool.end()
   }
   async insertSampleData(sampleCode, max, start = 0) {
     // string, int, int
     //   // seed sample data
-    const client = await this.pool.connect()
+    const pool = await this.pool.connect()
     try {
-      await client.query(
+      await pool.query(
         `INSERT INTO ${this.accessCodesTablename} (CODE,MAX,USED) VALUES($1, $2, $3);`,
         [sampleCode, max, start],
       )
     } catch (err) {
       console.log(err.stack)
     }
-    client.release()
+    await pool.end()
   }
 
   async accessCodeIsValid(accessCode) {
     // connect using the pool
-    const client = await this.pool.connect()
+    const pool = await this.pool.connect()
     // run the query with a sanitized access code input
-    const res = await client.query(
+    const res = await pool.query(
       `SELECT * FROM ${this.accessCodesTablename} WHERE CODE = $1;`,
       [accessCode],
     )
-
+    await pool.end()
     // there can only be one record per access code, so get it and make sure it hasn't been used up
     const responseRow = res.rows[0]
     if (responseRow && responseRow.max > responseRow.used) {
@@ -86,20 +86,22 @@ class Database {
 
   // increments the used column by 1
   async incrementCode(accessCode) {
-    const client = await this.pool.connect()
+    const pool = await this.pool.connect()
     // Checks if the codes max is greater than the used column
     if (await this.accessCodeIsValid(accessCode)) {
-      await client.query(
+      await pool.query(
         `UPDATE ${this.accessCodesTablename} SET USED = USED + 1 WHERE CODE = $1`,
         [accessCode],
       )
     }
+    await pool.end()
   }
   async getStatus() {
-    const client = await this.pool.connect()
-    const res = await client.query(
+    const pool = await this.pool.connect()
+    const res = await pool.query(
       `SELECT id, max, used FROM ${this.accessCodesTablename}`,
     )
+    await pool.end()
     return res.rows
   }
 }
