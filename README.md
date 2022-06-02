@@ -17,7 +17,7 @@ To access API, you must be on localhost:3000, localhost:3001, or *.satellite.one
 
 # Standard API Response Format
 200 for success, 400 for failure
-```json
+```javascript
 	{ 
 		"status": string  // eg: 'success' or 'failure'
 		"message": string // differs based on request
@@ -33,7 +33,7 @@ List server health information [GET]
 
 + Response 200 (application/json)
 
-```json
+```javascript
 {
     "uptimeSeconds": decimal, // service uptime in seconds
     "environment": string,    // api environment, DEV or EARLY_ACCESS
