@@ -1,3 +1,8 @@
+# URL's
+
+DEV -> `https://dev-faucet.satellite.one/`
+EARLY_ACCESS -> `https://ea-faucet.satellite.one/`
+
 # TODO
 add codes to standard api response
 
@@ -26,7 +31,7 @@ To access API, you must be on localhost:3000, localhost:3001, or *.satellite.one
 
 # Endpoints
 
-### Health Endpoint [/]
+### Health Endpoint [/health]
 
 List server health information [GET]
 

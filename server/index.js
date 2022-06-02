@@ -32,7 +32,7 @@ app.use(express.urlencoded({ extended: false }))
 app.use(express.json())
 
 // Health URL to see that the API is still running
-app.get('/', async (req, res) => {
+app.get('/health', async (req, res) => {
   let allCodeStatus = await db.getStatus()
   return res.status(200).json({
     uptimeSeconds: process.uptime(),
@@ -58,7 +58,7 @@ app.post('/', async (req, res) => {
   if (!address) {
     return res
       .status(400)
-      .json(commonResponse({ message: 'Malformed request, please include' }))
+      .json(commonResponse({ message: 'Malformed request, please include Address' }))
   }
 
   if (
@@ -100,7 +100,7 @@ app.post('/', async (req, res) => {
         if (!codeVal) {
           res.status(400).json(
             commonResponse({
-              message: 'The account balance limit has already been exceeded',
+              message: 'The access code has already reached the maximum',
             }),
           )
         }
