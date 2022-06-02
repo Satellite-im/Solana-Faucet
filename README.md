@@ -5,6 +5,7 @@ EARLY_ACCESS -> `https://ea-faucet.satellite.one/`
 
 # TODO
 add codes to standard api response
+user correct response codes, also when no records are found but api did that successfully, should be a success status
 
 # CORS
 To access API, you must be on localhost:3000, localhost:3001, or *.satellite.one. To add more domains, contact Hogan or Manuel

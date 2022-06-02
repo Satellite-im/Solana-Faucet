@@ -31,6 +31,11 @@ app.use(express.urlencoded({ extended: false }))
 // parse application/json
 app.use(express.json())
 
+app.get('/', async (req, res) => {
+  let allCodeStatus = await db.getStatus()
+  return res.status(200).send('Hello - Please visit https://github.com/Satellite-im/Solana-Faucet for more information')
+})
+
 // Health URL to see that the API is still running
 app.get('/health', async (req, res) => {
   let allCodeStatus = await db.getStatus()
