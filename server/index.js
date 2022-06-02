@@ -9,13 +9,13 @@ let db = new Database('AccessCodes')
 
 const app = express()
 const port = process.env.PORT
-
+const rpcURL = process.env.RPCURL
 const SolanaClusters = ['devnet', 'testnet', 'mainnet-beta']
 
 //Initializing Solana network connection
 const connection = SolanaClusters.includes(process.env.SOLANA_NETWORK)
   ? new web3.Connection(
-      web3.clusterApiUrl(process.env.SOLANA_NETWORK),
+    new Web3.providers.HttpProvider(rpcURL),
       'confirmed',
     )
   : new web3.Connection(process.env.SOLANA_NETWORK, 'confirmed')
@@ -68,7 +68,11 @@ app.post('/', async (req, res) => {
 
   // The faucet will ask to fund itself at each
   // api call
-  requestAirdrop()
+  try {
+    requestAirdrop()
+  } catch (e) {
+    console.log('air drop request fail ', e)
+  }
 
   const to = new web3.PublicKey(address)
 
