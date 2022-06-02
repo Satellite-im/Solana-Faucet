@@ -4,32 +4,25 @@ const web3 = require('@solana/web3.js')
 const express = require('express')
 const cors = require('cors')
 const Database = require('./app/db')
+const os = require('os-utils')
 
 let db = new Database('AccessCodes')
 
 const app = express()
-const port = process.env.PORT
 const rpcURL = process.env.RPCURL
 
-const SolanaClusters = ['devnet', 'testnet', 'mainnet-beta']
-
-//Initializing Solana network connection
-const connection = SolanaClusters.includes(process.env.SOLANA_NETWORK)
-  ? new web3.Connection(
-      rpcURL,
-      'confirmed',
-    )
-  : new web3.Connection(process.env.SOLANA_NETWORK, 'confirmed')
+//Initializing Solana network connection using rpc endpoint that gives us much higher concurrent calls
+const connection = new web3.Connection(rpcURL, 'confirmed')
 
 //Retrieve payer account keys
 const payerAccount = web3.Keypair.fromSecretKey(
   Buffer.from(process.env.PAYER_PRIVATE_KEY, 'base64'),
 )
 
-const corsOrigin = process.env.CORS_DOMAIN ? process.env.CORS_DOMAIN : '*'
+// controlled by host
 app.use(
   cors({
-    origin: corsOrigin,
+    origin: '*',
   }),
 )
 
@@ -38,38 +31,48 @@ app.use(express.urlencoded({ extended: false }))
 // parse application/json
 app.use(express.json())
 
+// Health URL to see that the API is still running
 app.get('/', async (req, res) => {
+  let allCodeStatus = await db.getStatus()
   return res.status(200).json({
-    status: 'success',
-    message: 'Service Healthy',
+    uptimeSeconds: process.uptime(),
+    environment: process.env.ENVIRONMENT,
+    averageLoad: {// system activity https://nodejs.org/api/os.html#osloadavg
+      one: os.loadavg(1),
+      five: os.loadavg(5),
+      fifteen: os.loadavg(15),
+    },
+    memory: {
+      free: os.freemem(),
+      total: os.totalmem(),
+    },
+    accessCodeUsage: allCodeStatus
   })
 })
+
+// URL for actually creating an account
 app.post('/', async (req, res) => {
   //Retrieve public key from address, and the access code
   const { address, accessCode } = req.body
 
   if (!address) {
-    return res.status(400).json({
-      status: 'failed',
-      errorCode: 3,
-      message: 'Malformed request',
-    })
+    return res
+      .status(400)
+      .json(commonResponse({ message: 'Malformed request, please include' }))
   }
 
   if (
     process.env.ENVIRONMENT === 'EARLY_ACCESS' &&
     !(await db.accessCodeIsValid(accessCode))
   ) {
-    return res.status(400).json({
-      status: 'failed',
-      errorCode: 4,
-      message: 'Invalid access code',
-    })
+    return res
+      .status(400)
+      .json(commonResponse({ message: 'Invalid Access Code' }))
   }
 
   // The faucet will ask to fund itself at each
   // api call
-  // requestAirdrop()
+  requestAirdrop()
 
   const to = new web3.PublicKey(address)
 
@@ -93,80 +96,73 @@ app.post('/', async (req, res) => {
         [payerAccount],
       )
       if (process.env.ENVIRONMENT === 'EARLY_ACCESS' && accessCode) {
-        await db.incrementCode(accessCode)
+        const codeVal = await db.incrementCode(accessCode)
+        if (!codeVal) {
+          res.status(400).json(
+            commonResponse({
+              message: 'The account balance limit has already been exceeded',
+            }),
+          )
+        }
       }
 
       //response for web3 transaction success
-      res.json({
-        status: 'success',
-        transactionSignature: signature,
-      })
+      res
+        .status(200)
+        .json(commonResponse({ status: success, message: signature }))
     } catch (error) {
       //response for web3 transaction error
-      res.json({
-        status: 'failed',
-        errorCode: 2,
-        message: error,
-      })
+      res.status(400).json(commonResponse({ message: error }))
     }
   } else {
     //Response for balance limit excedeed
-    res.json({
-      status: 'failed',
-      errorCode: 1,
-      message: 'The account balance limit has already been exceeded',
-    })
+    res.status(400).json(
+      commonResponse({
+        message: 'The account balance limit has already been exceeded',
+      }),
+    )
   }
-})
-
-// Returns an object with status on all access codes
-app.get('/checkCode/status', async (req, res) => {
-  let allCodeStatus = await db.getStatus()
-  if (!allCodeStatus) {
-    return res.status(400).json({
-      status: 'failed',
-      errorCode: 4,
-      message: 'Malformed request or invalid code',
-    })
-  }
-  return res.status(200).json({
-    status: 'success',
-    message: allCodeStatus,
-  })
 })
 
 // Allows you to check a single access code for a boolean response if it's good or not
 app.get('/checkCode/:accessCode', async (req, res) => {
   //Retrieve public key from address
-
   const { accessCode } = req.params
   const validStatus = await db.accessCodeIsValid(accessCode)
+
+  // Access code does not exist or code is invalid
   if (!accessCode || !validStatus) {
-    return res.status(400).json({
-      status: 'failed',
-      errorCode: 5,
-      message: 'Malformed request or invalid code',
-    })
+    return res.status(400).json(
+      commonResponse({
+        message: 'Malformed request or invalid code',
+      }),
+    )
   }
+
+  // Access code is valid!
   if (validStatus) {
-    return res.status(200).json({
-      status: 'success',
-    })
+    return res.status(200).json(
+      commonResponse({
+        status: 'success',
+        message: 'Code is Valid',
+      }),
+    )
   }
-  return res.status(400).json({
-    status: 'failed',
-    errorCode: 6,
-    message: 'Unknown Error',
-  })
+
+  // handle other scenarios
+  return res.status(400).json(commonResponse())
 })
 
-app.listen(port, () =>
-  console.log(
-    `Solana faucet app listening on port ${port}!`,
-    'ENV: ',
-    process.env.ENVIRONMENT,
-  ),
+app.listen(process.env.PORT, () =>
+  console.log(`Faucet listening on ${process.env.PORT}!`),
 )
+
+function commonResponse({ status = 'failed', message = 'Unknown Error' }) {
+  return {
+    status,
+    message,
+  }
+}
 
 async function requestAirdrop() {
   try {

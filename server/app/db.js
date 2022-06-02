@@ -17,7 +17,6 @@ class Database {
   async init() {
     this.pool = new Pool({
       connectionString: connString,
-      port: process.env.PORT,
       idleTimeoutMillis: 20000,
     })
 
@@ -68,40 +67,55 @@ class Database {
   }
 
   async accessCodeIsValid(accessCode) {
+    let responseRow = {}
+    let res = {}
     // connect using the pool
     const pool = await this.pool.connect()
     // run the query with a sanitized access code input
-    const res = await pool.query(
-      `SELECT * FROM ${this.accessCodesTablename} WHERE CODE = $1;`,
-      [accessCode],
-    )
-    await pool.end()
-    // there can only be one record per access code, so get it and make sure it hasn't been used up
-    const responseRow = res.rows[0]
-    if (responseRow && responseRow.max > responseRow.used) {
-      return true
+    try {
+      res = await pool.query(
+        `SELECT * FROM ${this.accessCodesTablename} WHERE CODE = $1;`,
+        [accessCode],
+      )
+    } finally {
+      // there can only be one record per access code, so get it and make sure it hasn't been used up
+      responseRow = res.rows[0]
+      pool.release()
+    }
+    
+    if (responseRow) {
+      if(responseRow.max > responseRow.used){
+        return true
+      }
     }
     return false
   }
 
   // increments the used column by 1
   async incrementCode(accessCode) {
+    // connect to pool
     const pool = await this.pool.connect()
     // Checks if the codes max is greater than the used column
-    if (await this.accessCodeIsValid(accessCode)) {
+    const codevalid = await this.accessCodeIsValid(accessCode)
+    console.log('codevalid', codevalid)
+    if (codevalid) {
+      console.log('hi')
       await pool.query(
         `UPDATE ${this.accessCodesTablename} SET USED = USED + 1 WHERE CODE = $1`,
         [accessCode],
       )
+      await pool.release()
+      return true
     }
-    await pool.end()
+    await pool.release()
+    return false
   }
   async getStatus() {
     const pool = await this.pool.connect()
     const res = await pool.query(
       `SELECT id, max, used FROM ${this.accessCodesTablename}`,
     )
-    await pool.end()
+    await pool.release()
     return res.rows
   }
 }
