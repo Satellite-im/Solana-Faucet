@@ -69,11 +69,7 @@ app.post('/', async (req, res) => {
 
   // The faucet will ask to fund itself at each
   // api call
-  try {
-    requestAirdrop()
-  } catch (e) {
-    console.log('air drop request')
-  }
+  // requestAirdrop()
 
   const to = new web3.PublicKey(address)
 
