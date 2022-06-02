@@ -10,12 +10,13 @@ let db = new Database('AccessCodes')
 const app = express()
 const port = process.env.PORT
 const rpcURL = process.env.RPCURL
+
 const SolanaClusters = ['devnet', 'testnet', 'mainnet-beta']
 
 //Initializing Solana network connection
 const connection = SolanaClusters.includes(process.env.SOLANA_NETWORK)
   ? new web3.Connection(
-    new Web3.providers.HttpProvider(rpcURL),
+      rpcURL,
       'confirmed',
     )
   : new web3.Connection(process.env.SOLANA_NETWORK, 'confirmed')
@@ -71,7 +72,7 @@ app.post('/', async (req, res) => {
   try {
     requestAirdrop()
   } catch (e) {
-    console.log('air drop request fail ', e)
+    console.log('air drop request')
   }
 
   const to = new web3.PublicKey(address)
