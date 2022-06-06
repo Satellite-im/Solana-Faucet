@@ -112,7 +112,7 @@ app.post('/', async (req, res) => {
       //response for web3 transaction success
       res
         .status(200)
-        .json(commonResponse({ status: 'success', message: signature }))
+        .json(commonResponse({ status: 'success', message: 'Account Created', transactionSignature: signature }))
     } catch (error) {
       //response for web3 transaction error
       res.status(400).json(commonResponse({ message: error }))
@@ -160,10 +160,11 @@ app.listen(process.env.PORT, () =>
   console.log(`Faucet listening on ${process.env.PORT}!`),
 )
 
-function commonResponse({ status = 'failed', message = 'Unknown Error' }) {
+function commonResponse({ status = 'failed', message = 'Unknown Error', transactionSignature = undefined }) {
   return {
     status,
     message,
+    transactionSignature,
   }
 }
 
