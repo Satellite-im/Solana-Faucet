@@ -32,7 +32,7 @@ app.use(express.urlencoded({ extended: false }))
 app.use(express.json())
 
 app.get('/', async (req, res) => {
-  let allCodeStatus = await db.getStatus()
+  // let allCodeStatus = await db.getStatus()
   return res.status(200).send('Hello - Please visit https://github.com/Satellite-im/Solana-Faucet for more information')
 })
 
@@ -59,7 +59,6 @@ app.get('/health', async (req, res) => {
 app.post('/', async (req, res) => {
   //Retrieve public key from address, and the access code
   const { address, accessCode } = req.body
-
   if (!address) {
     return res
       .status(400)
@@ -110,11 +109,10 @@ app.post('/', async (req, res) => {
           )
         }
       }
-
       //response for web3 transaction success
       res
         .status(200)
-        .json(commonResponse({ status: success, message: signature }))
+        .json(commonResponse({ status: 'success', message: signature }))
     } catch (error) {
       //response for web3 transaction error
       res.status(400).json(commonResponse({ message: error }))
