@@ -13,10 +13,13 @@ BALANCE_LIMIT = Maximum amount of SOL that an account can hold
 # How to run
 
 1. Build the docker image
+
 ```shell
 docker-compose build
 ```
+
 2. Run the faucet service
+
 ```shell
 docker-compose up
 ```
