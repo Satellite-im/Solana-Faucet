@@ -1,59 +1,59 @@
-require("dotenv").config();
+require('dotenv').config()
 
-const web3 = require("@solana/web3.js");
-const express = require("express");
-const cors = require("cors");
+const web3 = require('@solana/web3.js')
+const express = require('express')
+const cors = require('cors')
 
-const app = express();
-const port = process.env.PORT;
+const app = express()
+const port = process.env.PORT
 
-const SolanaClusters = ["devnet", "testnet", "mainnet-beta"];
+const SolanaClusters = ['devnet', 'testnet', 'mainnet-beta']
 
 //Initializing Solana network connection
 const connection = SolanaClusters.includes(process.env.SOLANA_NETWORK)
   ? new web3.Connection(
       web3.clusterApiUrl(process.env.SOLANA_NETWORK),
-      "confirmed"
+      'confirmed',
     )
-  : new web3.Connection(process.env.SOLANA_NETWORK, "confirmed");
+  : new web3.Connection(process.env.SOLANA_NETWORK, 'confirmed')
 
 //Retrieve payer account keys
 const payerAccount = web3.Keypair.fromSecretKey(
-  Buffer.from(process.env.PAYER_PRIVATE_KEY, "base64")
-);
+  Buffer.from(process.env.PAYER_PRIVATE_KEY, 'base64'),
+)
 
-console.log(`Payer: ${payerAccount.publicKey.toBase58()}`);
+console.log(`Payer: ${payerAccount.publicKey.toBase58()}`)
 
 app.use(
   cors({
-    origin: "*",
-  })
-);
+    origin: '*',
+  }),
+)
 
 // parse application/x-www-form-urlencoded
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false }))
 // parse application/json
-app.use(express.json());
+app.use(express.json())
 
-app.post("/", async (req, res) => {
+app.post('/', async (req, res) => {
   //Retrieve public key from address
-  const { address } = req.body;
+  const { address } = req.body
 
   if (!address) {
     return res.status(400).json({
-      status: "failed",
+      status: 'failed',
       errorCode: 3,
-      errorMessage: "Malformed request",
-    });
+      errorMessage: 'Malformed request',
+    })
   }
 
   // The faucet will ask to fund itself at each
   // api call
-  requestAirdrop();
+  requestAirdrop()
 
-  const to = new web3.PublicKey(address);
+  const to = new web3.PublicKey(address)
 
-  const balance = await connection.getBalance(to);
+  const balance = await connection.getBalance(to)
 
   if (balance < web3.LAMPORTS_PER_SOL * process.env.BALANCE_LIMIT) {
     try {
@@ -63,46 +63,46 @@ app.post("/", async (req, res) => {
           fromPubkey: payerAccount.publicKey,
           toPubkey: to,
           lamports: web3.LAMPORTS_PER_SOL * process.env.SOL_AMOUNT,
-        })
-      );
+        }),
+      )
 
       // Sign transaction, broadcast, and confirm
       const signature = await web3.sendAndConfirmTransaction(
         connection,
         transaction,
-        [payerAccount]
-      );
+        [payerAccount],
+      )
 
       //response for web3 transaction success
       res.json({
-        status: "success",
+        status: 'success',
         transactionSignature: signature,
-      });
+      })
     } catch (error) {
       //response for web3 transaction error
       res.json({
-        status: "failed",
+        status: 'failed',
         errorCode: 2,
         errorMessage: error,
-      });
+      })
     }
   } else {
     //Response for balance limit excedeed
     res.json({
-      status: "failed",
+      status: 'failed',
       errorCode: 1,
-      errorMessage: "The account balance limit has already been exceeded",
-    });
+      errorMessage: 'The account balance limit has already been exceeded',
+    })
   }
-});
+})
 
 app.listen(port, () =>
-  console.log(`Solana faucet app listening on port ${port}!`)
-);
+  console.log(`Solana faucet app listening on port ${port}!`),
+)
 
 async function requestAirdrop() {
   return connection.requestAirdrop(
     payerAccount.publicKey,
-    web3.LAMPORTS_PER_SOL * 1
-  );
+    web3.LAMPORTS_PER_SOL * 1,
+  )
 }
